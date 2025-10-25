@@ -16,7 +16,12 @@ import { errorHandler } from './middlewares/error.middleware.js';
 import invitationsRouter from './routes/invitations.router.js';
 
 const app = express();
-
+if (process.env.NODE_ENV === 'production') {
+  // `1` = trust first proxy hop (Render)
+  app.set('trust proxy', 1);
+  // Alternatively:
+  // app.set("trust proxy", true); // trust all proxies
+}
 // Core middleware
 // app.use(
 //   cors({

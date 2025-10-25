@@ -26,7 +26,7 @@
     "db:push": "prisma db push",
     "seed": "node prisma/seed.js",
     "husky:install": "husky install",
-    "prepare": "husky"
+    "prepare": "[ -x node_modules/.bin/husky ] && husky install || echo 'Husky not installed; skipping'"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

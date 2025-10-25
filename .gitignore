@@ -1,0 +1,14 @@
+# node
+node_modules
+
+# env files (never commit secrets)
+.env
+.env.*
+!.env.example
+
+# builds
+dist
+build
+
+# misc
+.DS_Store

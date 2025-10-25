@@ -1,0 +1,16 @@
+model Shift {
+  id         String   @id @default(cuid())
+  tenantId   String
+  employeeId String
+  date       DateTime // normalized to midnight
+  start      String // "HH:mm"
+  end        String
+  role       String   @default("Staff")
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+
+  employee     Employee    @relation(fields: [employeeId], references: [id])
+  swapRequests ShiftSwap[]
+
+  @@index([tenantId, date])
+  @@index([tenantId, employeeId, date])
+}

@@ -1,0 +1,9 @@
+model FeatureFlag {
+  id       String  @id @default(cuid())
+  tenantId String
+  key      String
+  enabled  Boolean @default(false)
+  tenant   Tenant  @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, key])
+}

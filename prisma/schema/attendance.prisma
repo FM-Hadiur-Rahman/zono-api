@@ -1,0 +1,9 @@
+model AttendanceEvent {
+  id         String   @id @default(cuid())
+  tenantId   String
+  employeeId String
+  type       String // clock_in | clock_out
+  ts         DateTime @default(now())
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  employee   Employee @relation(fields: [employeeId], references: [id])
+}

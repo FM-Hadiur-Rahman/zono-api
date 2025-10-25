@@ -1,0 +1,12 @@
+model AuditLog {
+  id       String   @id @default(cuid())
+  tenantId String
+  userId   String?
+  action   String
+  entity   String
+  entityId String?
+  before   Json?
+  after    Json?
+  ts       DateTime @default(now())
+  tenant   Tenant   @relation(fields: [tenantId], references: [id])
+}

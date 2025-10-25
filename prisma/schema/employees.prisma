@@ -1,0 +1,24 @@
+model Employee {
+  id         String  @id @default(cuid())
+  tenantId   String
+  userId     String? // if you’re doing the user link
+  locationId String?
+  name       String
+  role       String
+  status     String  @default("Available")
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id])
+  location Location? @relation(fields: [locationId], references: [id])
+  user     User?     @relation(fields: [userId], references: [id])
+
+  shifts       Shift[]
+  events       AttendanceEvent[]
+  availability Availability[]
+  swapsFrom    ShiftSwap[]       @relation("SwapFrom") // back-rel
+  swapsTo      ShiftSwap[]       @relation("SwapTo") // back-rel
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  @@index([tenantId, userId])
+  @@unique([tenantId, userId])
+}

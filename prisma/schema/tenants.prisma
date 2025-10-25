@@ -1,0 +1,32 @@
+model Tenant {
+  id         String            @id @default(cuid())
+  name       String
+  subdomain  String            @unique // ✅ required by your controller
+  plan       String            @default("Standard")
+  status     String            @default("active")
+  createdAt  DateTime          @default(now())
+  locations  Location[]
+  users      User[]
+  employees  Employee[]
+  shifts     Shift[]
+  attendance AttendanceEvent[]
+  items      InventoryItem[]
+  levels     InventoryLevel[]
+  alerts     LowStockAlert[]
+  features   FeatureFlag[]
+  audits     AuditLog[]
+
+  // if you added invitations:
+  invitations Invitation[]
+}
+
+model Location {
+  id        String           @id @default(cuid())
+  tenantId  String
+  name      String
+  timezone  String           @default("Europe/Berlin")
+  tenant    Tenant           @relation(fields: [tenantId], references: [id])
+  employees Employee[]
+  items     InventoryItem[]
+  levels    InventoryLevel[]
+}

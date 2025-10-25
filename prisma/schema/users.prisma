@@ -1,0 +1,44 @@
+model User {
+  id              String     @id @default(cuid())
+  email           String     @unique
+  passwordHash    String
+  role            String
+  tenantId        String?
+  tenant          Tenant?    @relation(fields: [tenantId], references: [id])
+  createdAt       DateTime   @default(now())
+  emailVerifiedAt DateTime?
+  phone           String?
+  country         String?
+  // you already had this
+  employees       Employee[]
+
+  // ✅ back-relation to EmailVerificationToken
+  emailVerificationTokens EmailVerificationToken[] @relation("UserEmailVerificationTokens")
+}
+
+model EmailVerificationToken {
+  id        String    @id @default(cuid())
+  userId    String
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+
+  // ✅ forward side with the SAME relation name
+  user User @relation("UserEmailVerificationTokens", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Invitation {
+  id         String    @id @default(cuid())
+  tenantId   String
+  email      String
+  role       String
+  token      String    @unique
+  expiresAt  DateTime
+  acceptedAt DateTime?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+}

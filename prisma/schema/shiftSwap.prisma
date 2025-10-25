@@ -1,0 +1,30 @@
+// prisma/schema/shiftSwap.prisma
+
+enum ShiftSwapStatus {
+  pending_target
+  pending_manager
+  approved
+  declined
+  cancelled
+}
+
+model ShiftSwap {
+  id              String          @id @default(cuid())
+  tenantId        String
+  shiftId         String
+  fromEmployeeId  String
+  toEmployeeId    String
+  status          ShiftSwapStatus @default(pending_target)
+  reason          String?
+  decidedAt       DateTime?
+  decidedByUserId String?
+  createdAt       DateTime        @default(now())
+
+  // forward relations
+  shift        Shift    @relation(fields: [shiftId], references: [id])
+  fromEmployee Employee @relation("SwapFrom", fields: [fromEmployeeId], references: [id])
+  toEmployee   Employee @relation("SwapTo", fields: [toEmployeeId], references: [id])
+
+  @@index([tenantId, shiftId])
+  @@index([tenantId, toEmployeeId, status])
+}

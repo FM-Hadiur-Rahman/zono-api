@@ -1,0 +1,35 @@
+model InventoryItem {
+  id                String           @id @default(cuid())
+  tenantId          String
+  locationId        String?
+  name              String
+  sku               String?          @unique
+  lowStockThreshold Int              @default(0)
+  tenant            Tenant           @relation(fields: [tenantId], references: [id])
+  location          Location?        @relation(fields: [locationId], references: [id])
+  levels            InventoryLevel[]
+  alerts            LowStockAlert[]
+}
+
+model InventoryLevel {
+  id         String        @id @default(cuid())
+  tenantId   String
+  itemId     String
+  qtyOnHand  Int           @default(0)
+  updatedAt  DateTime      @default(now())
+  tenant     Tenant        @relation(fields: [tenantId], references: [id])
+  item       InventoryItem @relation(fields: [itemId], references: [id])
+  locationId String?
+  location   Location?     @relation(fields: [locationId], references: [id])
+}
+
+model LowStockAlert {
+  id         String        @id @default(cuid())
+  tenantId   String
+  itemId     String
+  level      Int
+  createdAt  DateTime      @default(now())
+  resolvedAt DateTime?
+  tenant     Tenant        @relation(fields: [tenantId], references: [id])
+  item       InventoryItem @relation(fields: [itemId], references: [id])
+}

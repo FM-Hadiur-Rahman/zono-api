@@ -1,0 +1,16 @@
+// prisma/schema/availability.prisma
+model Availability {
+  id         String   @id @default(cuid())
+  tenantId   String
+  employeeId String
+  date       DateTime // normalized to midnight (tenant TZ ideally)
+  start      String // "HH:mm"
+  end        String // "HH:mm"
+  note       String? // optional notes
+  createdAt  DateTime @default(now())
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+
+  @@index([tenantId, employeeId, date])
+  @@index([tenantId, date])
+}

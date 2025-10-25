@@ -4,12 +4,12 @@
   "type": "module",
   "main": "src/server.js",
   "engines": {
-    "node": ">=18.18"
+    "node": "20.x"
   },
   "scripts": {
     "dev": "NODE_ENV=development node --watch src/server.js",
     "dev:api": "dotenv -e .env.development -- node --watch src/server.js",
-    "start": "NODE_ENV=production node src/server.js",
+    "start": "npm run prisma:migrate:deploy && NODE_ENV=production node src/server.js",
     "start:staging": "NODE_ENV=staging node src/server.js",
     "seed:dev": "dotenv -e .env.development -- node prisma/seed.js",
     "studio:dev": "dotenv -e .env.development -- npx prisma studio --schema prisma/schema",
@@ -26,10 +26,12 @@
     "db:push": "prisma db push",
     "seed": "node prisma/seed.js",
     "husky:install": "husky install",
-    "prepare": "[ -x node_modules/.bin/husky ] && husky install || echo 'Husky not installed; skipping'"
+    "prepare": "[ -x node_modules/.bin/husky ] && husky install || echo 'Husky not installed; skipping'",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
+    "prisma": "^5.22.0",
     "bcryptjs": "^2.4.3",
     "compression": "^1.7.4",
     "cors": "^2.8.5",
@@ -52,7 +54,6 @@
     "husky": "^9.1.7",
     "lint-staged": "^15.2.10",
     "prettier": "^3.3.3",
-    "prisma": "^5.22.0",
     "supertest": "^7.0.0",
     "vitest": "^2.1.4"
   },

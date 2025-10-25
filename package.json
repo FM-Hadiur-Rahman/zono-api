@@ -25,7 +25,8 @@
     "prisma:reset": "prisma migrate reset --force",
     "db:push": "prisma db push",
     "seed": "node prisma/seed.js",
-    "prepare": "husky install"
+    "husky:install": "husky install",
+    "prepare": "if [ \"$CI\" != \"true\" ]; then npm run husky:install; else echo 'Skipping husky on CI'; fi"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

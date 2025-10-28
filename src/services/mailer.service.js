@@ -43,3 +43,26 @@ export async function sendMail({ to, subject, html, text, attachments }) {
     throw err; // let the route return 502 so UI shows a toast error
   }
 }
+// async function sendViaResend({ to, subject, html, text }) {
+//   const key = process.env.RESEND_API_KEY;
+//   if (!key) throw new Error("Missing RESEND_API_KEY");
+//   const r = await fetch("https://api.resend.com/emails", {
+//     method: "POST",
+//     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+//     body: JSON.stringify({ from: process.env.EMAIL_FROM || `Zono <no-reply@zono.app>`, to: [to], subject, html, text }),
+//   });
+//   if (!r.ok) throw new Error(`Resend error ${r.status}`);
+//   return r.json();
+// }
+
+// // swap inside sendMail try{}:  if Gmail throws ETIMEDOUT, fall back:
+// try {
+//   const info = await transporter.sendMail(mailOptions);
+//   return { ok: true, id: info.messageId };
+// } catch (e) {
+//   if (process.env.RESEND_API_KEY) {
+//     console.warn("SMTP failed, falling back to Resend:", e.message);
+//     return await sendViaResend({ to, subject, html, text, attachments });
+//   }
+//   throw e;
+// }

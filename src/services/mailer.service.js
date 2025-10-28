@@ -1,7 +1,7 @@
 // src/services/mailer.service.js
 import nodemailer from 'nodemailer';
 import dns from 'node:dns';
-
+require('dotenv').config();
 dns.setDefaultResultOrder('ipv4first'); // Avoid IPv6 timeout on Render
 
 const EMAIL_ENABLED = process.env.EMAIL_ENABLED === 'true';

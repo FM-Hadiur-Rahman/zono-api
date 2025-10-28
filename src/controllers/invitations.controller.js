@@ -21,19 +21,25 @@ export async function sendInvite(req, res) {
   const origin = process.env.APP_ORIGIN || 'http://localhost:5173';
   const url = `${origin}/invite/${token}`;
 
-  await sendMail({
-    to: email,
-    subject: 'You’re invited to Zono',
-    html: `<p>You’ve been invited to join Zono as <b>${role}</b>.</p><p><a href="${url}">Accept invitation</a></p>`,
-  });
-
-  return res.status(201).json({
-    ok: true,
-    id: inv.id,
-    token,
-    link: url,
-    expiresAt: inv.expiresAt,
-  });
+  // inside sendInvite controller
+  try {
+    await sendMail({
+      to: email,
+      subject: 'You’re invited to Zono',
+      html: `<p>You’ve been invited to join Zono as <b>${role}</b>.</p><p><a href="${url}">Accept invitation</a></p>`,
+    });
+    return res
+      .status(201)
+      .json({
+        ok: true,
+        id: inv.id,
+        token,
+        link: url,
+        expiresAt: inv.expiresAt,
+      });
+  } catch (e) {
+    return res.status(502).json({ ok: false, error: 'EMAIL_SEND_FAILED' });
+  }
 }
 /** GET /api/invitations/validate?token=... (public) */
 export async function validateInvite(req, res) {

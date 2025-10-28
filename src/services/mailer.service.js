@@ -1,60 +1,45 @@
-// src/services/mailer.service.js
+// src/services/mailer.service.js (Zono)
 import nodemailer from 'nodemailer';
 import dns from 'node:dns';
 
-dns.setDefaultResultOrder('ipv4first'); // Avoid IPv6 timeout on Render
+dns.setDefaultResultOrder('ipv4first'); // avoid IPv6 on Render
 
-const EMAIL_ENABLED = process.env.EMAIL_ENABLED === 'true';
-let transporter;
+const EMAIL_ENABLED =
+  String(process.env.EMAIL_ENABLED).toLowerCase() === 'true';
 
-/**
- * Create or reuse the SMTP transporter.
- */
-export function getTransporter() {
-  if (!EMAIL_ENABLED) return null;
-  if (transporter) return transporter;
+const transporter = nodemailer.createTransport({
+  service: 'gmail', // let Nodemailer pick host/port/secure
+  auth: {
+    user: process.env.EMAIL_USER, // e.g. zonoworkforce@gmail.com
+    pass: process.env.EMAIL_PASS, // Gmail App Password
+  },
+  pool: true, // reuse connections, helps with transient TLS handshakes
+  maxConnections: 3,
+  connectionTimeout: 15000,
+  greetingTimeout: 10000,
+  // Force IPv4 sockets to dodge AAAA routes that can hang on some hosts
+  family: 4,
+});
 
-  const port = Number(process.env.SMTP_PORT) || 465;
-  const secure = port === 465; // true for 465 (SSL), false for 587 (STARTTLS)
-
-  transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST, // smtp.gmail.com
-    port,
-    secure,
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS, // Google App Password
-    },
-    connectionTimeout: 20000, // 20s
-    greetingTimeout: 10000,
-    requireTLS: !secure, // only needed if you switch to 587
-  });
-
-  return transporter;
-}
-
-/**
- * Send an email
- */
-export async function sendMail({ to, subject, html, text }) {
+export async function sendMail({ to, subject, html, text, attachments }) {
   if (!EMAIL_ENABLED) {
-    console.warn('📧 Email disabled (EMAIL_ENABLED=false)');
+    console.info('✉️ EMAIL_ENABLED=false → skipping');
     return { skipped: true };
   }
-
+  const mailOptions = {
+    from: `"Zono" <${process.env.EMAIL_USER}>`,
+    to,
+    subject,
+    html,
+    text,
+    attachments,
+  };
   try {
-    const tx = getTransporter();
-    const info = await tx.sendMail({
-      from: `"Zono" <${process.env.EMAIL_USER}>`,
-      to,
-      subject,
-      html,
-      text,
-    });
-    console.log(`✅ Mail sent: ${info.messageId}`);
-    return info;
+    const info = await transporter.sendMail(mailOptions);
+    console.log('✅ Email sent:', info.messageId);
+    return { ok: true, id: info.messageId };
   } catch (err) {
-    console.error('✉️ Mail error:', err.message);
-    return { error: true, message: err.message };
+    console.error('❌ Failed to send email:', err.message);
+    throw err; // let the route return 502 so UI shows a toast error
   }
 }

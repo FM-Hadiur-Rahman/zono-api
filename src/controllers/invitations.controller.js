@@ -6,13 +6,38 @@ import { genToken, addHours } from '../utils/tokens.js';
 /** POST /api/invitations/send (owner/admin) */
 export async function sendInvite(req, res) {
   const { email, role = 'employee', expiresInHours = 72 } = req.body;
+  const to = String(email || '').toLowerCase();
+  const r = String(role || '').toLowerCase();
+
+  // optional: avoid duplicate pending invites for same tenant+email
+  const existing = await prisma.invitation.findFirst({
+    where: {
+      tenantId: req.user.tenantId,
+      email: to,
+      acceptedAt: null,
+      expiresAt: { gt: new Date() },
+    },
+  });
+  if (existing) {
+    const origin = process.env.APP_ORIGIN || 'http://localhost:5173';
+    const link = `${origin}/invite/${existing.token}`;
+    return res.status(200).json({
+      ok: true,
+      reused: true,
+      id: existing.id,
+      link,
+      token: existing.token,
+      expiresAt: existing.expiresAt.toISOString(),
+      note: 'Existing pending invite reused.',
+    });
+  }
 
   const token = genToken(24);
   const inv = await prisma.invitation.create({
     data: {
       tenantId: req.user.tenantId,
-      email: email.toLowerCase(),
-      role: role.toLowerCase(),
+      email: to,
+      role: r,
       token,
       expiresAt: addHours(new Date(), Number(expiresInHours)),
     },
@@ -20,25 +45,49 @@ export async function sendInvite(req, res) {
 
   const origin = process.env.APP_ORIGIN || 'http://localhost:5173';
   const url = `${origin}/invite/${token}`;
+  const from =
+    process.env.EMAIL_FROM ||
+    `Zono <${process.env.EMAIL_USER || 'no-reply@zono.works'}>`;
 
-  // inside sendInvite controller
   try {
     await sendMail({
-      to: email,
+      to,
       subject: 'You’re invited to Zono',
-      html: `<p>You’ve been invited to join Zono as <b>${role}</b>.</p><p><a href="${url}">Accept invitation</a></p>`,
+      html: `
+        <p>You’ve been invited to join Zono as <b>${r}</b>.</p>
+        <p><a href="${url}">Accept invitation</a></p>
+        <p style="color:#667085;font-size:12px">If the button doesn’t work, paste this link into your browser: ${url}</p>
+      `,
+      text: `You’ve been invited to join Zono as ${r}.\nAccept invitation: ${url}\n`,
+      from, // supported by your Resend/Gmail sender
     });
+
     return res.status(201).json({
       ok: true,
       id: inv.id,
       token,
       link: url,
-      expiresAt: inv.expiresAt,
+      expiresAt: inv.expiresAt.toISOString(),
     });
   } catch (e) {
-    return res.status(502).json({ ok: false, error: e.message, code: e.code });
+    // CHOOSE ONE:
+
+    // A) Soft-fail: keep invite and let the UI show "Copy link"
+    return res.status(201).json({
+      ok: true,
+      id: inv.id,
+      token,
+      link: url,
+      expiresAt: inv.expiresAt.toISOString(),
+      emailWarning: e.message || 'EMAIL_SEND_FAILED',
+    });
+
+    // B) Hard-fail: delete invite so you don’t leave a dangling token
+    // await prisma.invitation.delete({ where: { id: inv.id } });
+    // return res.status(502).json({ ok: false, error: e.message, code: e.code });
   }
 }
+
 /** GET /api/invitations/validate?token=... (public) */
 export async function validateInvite(req, res) {
   const token = String(req.query.token || '');

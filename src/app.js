@@ -23,14 +23,29 @@ if (process.env.NODE_ENV === 'production') {
   // app.set("trust proxy", true); // trust all proxies
 }
 // Core middleware
-// app.use(
-//   cors({
-//     origin: 'http://localhost:5173',
-//     credentials: false,
-//     allowedHeaders: ['Content-Type', 'Authorization', 'X-Tenant'],
-//   }),
-// );
-app.use(cors());
+const allowlist = [
+  'https://zono.works',
+  'https://www.zono.works',
+  'http://localhost:5173', // dev
+  'http://127.0.0.1:5173',
+];
+
+const corsOptions = {
+  origin(origin, cb) {
+    // allow REST clients / server-to-server with no Origin header
+    if (!origin) return cb(null, true);
+    cb(null, allowlist.includes(origin));
+  },
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  credentials: true, // only if you use cookies/auth headers cross-site
+  maxAge: 86400,
+};
+
+app.use(cors(corsOptions));
+// Handle preflight for all routes
+app.options('*', cors(corsOptions));
+
 app.use(express.json());
 if (process.env.NODE_ENV !== 'production') {
   app.use(morgan('dev'));

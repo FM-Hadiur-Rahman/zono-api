@@ -19,7 +19,7 @@ export async function sendMail({ to, subject, html, text, attachments } = {}) {
   // --- Production: Resend (HTTP, reliable on Render) ---
   if (isProd && hasResend) {
     const payload = {
-      from: process.env.EMAIL_FROM || 'Zono <no-reply@zono.app>',
+      from: process.env.EMAIL_FROM || 'Zono <no-reply@zono.works>',
       to: Array.isArray(to) ? to : [to],
       subject,
       html,

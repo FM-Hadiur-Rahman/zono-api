@@ -28,17 +28,15 @@ export async function sendInvite(req, res) {
       subject: 'You’re invited to Zono',
       html: `<p>You’ve been invited to join Zono as <b>${role}</b>.</p><p><a href="${url}">Accept invitation</a></p>`,
     });
-    return res
-      .status(201)
-      .json({
-        ok: true,
-        id: inv.id,
-        token,
-        link: url,
-        expiresAt: inv.expiresAt,
-      });
+    return res.status(201).json({
+      ok: true,
+      id: inv.id,
+      token,
+      link: url,
+      expiresAt: inv.expiresAt,
+    });
   } catch (e) {
-    return res.status(502).json({ ok: false, error: 'EMAIL_SEND_FAILED' });
+    return res.status(502).json({ ok: false, error: e.message, code: e.code });
   }
 }
 /** GET /api/invitations/validate?token=... (public) */

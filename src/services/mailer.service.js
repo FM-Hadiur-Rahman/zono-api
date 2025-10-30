@@ -30,39 +30,65 @@
 // };
 
 // src/services/mailer.service.js
+// src/services/mailer.service.js
 import nodemailer from 'nodemailer';
 import dns from 'node:dns';
 
-dns.setDefaultResultOrder('ipv4first'); // avoid IPv6 stalls on some hosts
+dns.setDefaultResultOrder('ipv4first');
 
-const EMAIL_ENABLED =
-  String(process.env.EMAIL_ENABLED).toLowerCase() === 'true';
+const EMAIL = process.env.EMAIL_USER;
+const PASS = process.env.EMAIL_PASS;
+const ENABLED = String(process.env.EMAIL_ENABLED).toLowerCase() === 'true';
 
-// Minimal Gmail transport (no host/port!)
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER, // e.g., zonoworkforce@gmail.com
-    pass: process.env.EMAIL_PASS, // 16-char App Password, NO SPACES
-  },
+const base = {
+  host: 'smtp.gmail.com',
+  auth: { user: EMAIL, pass: PASS },
   pool: true,
-  maxConnections: 3,
-  connectionTimeout: 15000,
-  greetingTimeout: 10000,
-  family: 4,
-});
+  maxConnections: 2,
+  connectionTimeout: 10000,
+  greetingTimeout: 8000,
+  family: 4, // force IPv4
+};
 
-// Optional: enable Nodemailer internal logging in production
-if (process.env.NODE_ENV === 'production') {
-  transporter.set('logger', true);
-  transporter.set('debug', true);
+const C465 = { ...base, port: 465, secure: true };
+const C587 = {
+  ...base,
+  port: 587,
+  secure: false,
+  requireTLS: true,
+  tls: { servername: 'smtp.gmail.com' },
+};
+
+let transporter; // active working transporter
+let fallbackTried = false;
+
+async function tryCreate(cfg) {
+  const t = nodemailer.createTransport(cfg);
+  await t.verify(); // actually opens the socket; throws on ETIMEDOUT/ECONNECTION
+  return t;
+}
+
+async function getTransporter() {
+  if (transporter) return transporter;
+  if (!ENABLED) throw new Error('EMAIL_ENABLED=false');
+
+  // Try 465 first, then 587
+  try {
+    transporter = await tryCreate(C465);
+    console.log('📮 Gmail SMTP ready on 465 (SSL)');
+  } catch (e) {
+    console.warn('⚠️  465 failed:', e.code || e.message, '→ trying 587');
+    transporter = await tryCreate(C587);
+    console.log('📮 Gmail SMTP ready on 587 (STARTTLS)');
+  }
+  return transporter;
 }
 
 export async function sendMail({ to, subject, html, text, attachments }) {
-  if (!EMAIL_ENABLED) return { skipped: true };
+  if (!ENABLED) return { skipped: true };
 
-  const mailOptions = {
-    from: `"Zono" <${process.env.EMAIL_USER}>`,
+  const mail = {
+    from: `"Zono" <${EMAIL}>`,
     to,
     subject,
     html,
@@ -71,20 +97,33 @@ export async function sendMail({ to, subject, html, text, attachments }) {
   };
 
   try {
-    const info = await transporter.sendMail(mailOptions);
-    console.log(`✅ Gmail sent to ${to} (${info.messageId})`);
+    const tx = await getTransporter();
+    const info = await tx.sendMail(mail);
+    console.log(`✅ Sent to ${to} (${info.messageId})`);
     return info;
   } catch (err) {
-    // log ALL the useful bits
-    console.error('❌ Gmail send failed:', {
-      code: err.code,
-      name: err.name,
-      message: err.message,
-      command: err.command,
-      response: err.response,
-      responseCode: err.responseCode,
-    });
-    throw err; // let the route decide how to reply
+    // If first attempt timed out on one port, auto-retry the other once
+    if (err && err.code === 'ETIMEDOUT' && !fallbackTried) {
+      fallbackTried = true;
+      try {
+        // swap config and retry
+        transporter =
+          transporter?.options?.port === 465
+            ? await tryCreate(C587)
+            : await tryCreate(C465);
+        console.warn('🔁 Retrying via alternate Gmail port...');
+        const info = await transporter.sendMail(mail);
+        console.log(`✅ Sent to ${to} (${info.messageId})`);
+        return info;
+      } catch (e2) {
+        console.error('❌ Retry failed:', e2.code || e2.message);
+        throw e2;
+      }
+    }
+    console.error('❌ Gmail send failed:', err.code || err.message);
+    throw err;
+  } finally {
+    fallbackTried = false;
   }
 }
 

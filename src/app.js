@@ -37,7 +37,7 @@ const corsOptions = {
     cb(null, allowlist.includes(origin));
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+
   credentials: true, // only if you use cookies/auth headers cross-site
   maxAge: 86400,
 };

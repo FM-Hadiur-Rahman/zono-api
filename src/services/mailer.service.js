@@ -9,17 +9,25 @@ const emailEnabled =
  * - in production (Render): uses Resend HTTPS (no SMTP ports)
  * - in dev/local: uses Gmail SMTP with App Password
  */
-export async function sendMail({ to, subject, html, text, attachments } = {}) {
+export async function sendMail({
+  to,
+  subject,
+  html,
+  text,
+  attachments,
+  from,
+} = {}) {
   if (!emailEnabled) return { skipped: true };
 
   if (!to || !subject || (!html && !text)) {
     throw new Error("sendMail: missing 'to', 'subject', or 'html/text'");
   }
-
+  const resolvedFrom =
+    from || process.env.EMAIL_FROM || 'Zono <no-reply@zono.works>';
   // --- Production: Resend (HTTP, reliable on Render) ---
   if (isProd && hasResend) {
     const payload = {
-      from: process.env.EMAIL_FROM || 'Zono <no-reply@zono.works>',
+      from: resolvedFrom,
       to: Array.isArray(to) ? to : [to],
       subject,
       html,
@@ -40,10 +48,10 @@ export async function sendMail({ to, subject, html, text, attachments } = {}) {
     });
     if (!r.ok) {
       const body = await r.text();
-      throw new Error(`Resend ${r.status}: ${body}`);
+      throw new Error(`Resend ${r.status} (from=${resolvedFrom}): ${body}`);
     }
     const data = await r.json();
-    console.log('✅ Email via Resend:', data.id);
+    console.log('✅ Email via Resend:', { id: data.id, from: resolvedFrom });
     return { ok: true, id: data.id, transport: 'resend' };
   }
 
@@ -58,7 +66,7 @@ export async function sendMail({ to, subject, html, text, attachments } = {}) {
   });
 
   const info = await tx.sendMail({
-    from: `"Zono" <${process.env.EMAIL_USER}>`,
+    from: resolvedFrom || `"Zono" <${process.env.EMAIL_USER}>`,
     to,
     subject,
     html,

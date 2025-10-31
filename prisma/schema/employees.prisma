@@ -1,7 +1,7 @@
 model Employee {
   id         String  @id @default(cuid())
   tenantId   String
-  userId     String? // if you’re doing the user link
+  userId     String // if you’re doing the user link
   locationId String?
   name       String
   role       String

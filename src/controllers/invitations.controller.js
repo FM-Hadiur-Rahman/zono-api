@@ -134,28 +134,55 @@ export async function acceptInvite(req, res) {
   if (!inv || inv.acceptedAt || inv.expiresAt < new Date())
     return res.status(400).json({ error: 'Invalid or expired token' });
 
-  const exists = await prisma.user.findFirst({
+  const dup = await prisma.user.findFirst({
     where: { tenantId: inv.tenantId, email: inv.email },
   });
-  if (exists) return res.status(409).json({ error: 'User already exists' });
+  if (dup) return res.status(409).json({ error: 'User already exists' });
 
   const hash = await bcrypt.hash(password, 12);
-  await prisma.user.create({
-    data: {
-      tenantId: inv.tenantId,
-      email: inv.email,
-      passwordHash: hash,
-      role: inv.role, // your User has single role
-      // optional fields you may have:
-      // name,
-      // phone,
-      emailVerifiedAt: new Date(), // if you want staff verify, set null and send verify email here too
-    },
-  });
 
-  await prisma.invitation.update({
-    where: { token },
-    data: { acceptedAt: new Date() },
+  // If your employee roles differ from user roles, map them here:
+  const roleMap = {
+    rider: 'rider',
+    kitchen: 'kitchen',
+    manager: 'manager',
+    employee: 'employee',
+  };
+  const employeeRole = roleMap[inv.role] ?? 'employee';
+
+  const displayName = name?.trim() || inv.email.split('@')[0];
+
+  await prisma.$transaction(async (tx) => {
+    const user = await tx.user.create({
+      data: {
+        tenantId: inv.tenantId,
+        email: inv.email,
+        passwordHash: hash,
+        role: inv.role, // single role on User
+        name: displayName,
+        phone: phone || null,
+        emailVerifiedAt: new Date(),
+      },
+      select: { id: true },
+    });
+
+    // Ensure there is an Employee row linked to this user
+    await tx.employee.upsert({
+      where: { tenantId_userId: { tenantId: inv.tenantId, userId: user.id } }, // uses @@unique
+      update: {}, // nothing to update if it already exists
+      create: {
+        tenantId: inv.tenantId,
+        userId: user.id,
+        name: displayName,
+        role: employeeRole, // Employee.role is String in your model
+        status: 'Available', // matches your default casing
+      },
+    });
+
+    await tx.invitation.update({
+      where: { token },
+      data: { acceptedAt: new Date() },
+    });
   });
 
   return res.json({ ok: true });

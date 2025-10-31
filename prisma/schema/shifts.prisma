@@ -8,8 +8,9 @@ model Shift {
   role       String   @default("Staff")
   tenant     Tenant   @relation(fields: [tenantId], references: [id])
 
-  employee     Employee    @relation(fields: [employeeId], references: [id])
-  swapRequests ShiftSwap[]
+  employee        Employee          @relation(fields: [employeeId], references: [id])
+  swapRequests    ShiftSwap[]
+  AttendanceEvent AttendanceEvent[]
 
   @@index([tenantId, date])
   @@index([tenantId, employeeId, date])

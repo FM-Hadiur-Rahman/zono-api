@@ -1,37 +1,37 @@
 enum AttendanceStatus {
-  working     // clocked-in, not yet out
-  present     // clocked in & out
-  late        // started after shift start + grace
-  left_early  // left before shift end - grace
-  absent      // no show (set by rule or admin)
+  working // clocked-in, not yet out
+  present // clocked in & out
+  late // started after shift start + grace
+  left_early // left before shift end - grace
+  absent // no show (set by rule or admin)
 }
 
 model AttendanceEvent {
-  id          String            @id @default(cuid())
+  id          String           @id @default(cuid())
   tenantId    String
   employeeId  String
   shiftId     String?
-  date        DateTime          // normalized to 00:00 of local tz
+  date        DateTime // normalized to 00:00 of local tz
   clockInAt   DateTime?
-  clockInSrc  String?           // 'web', 'kiosk', 'mobile'
+  clockInSrc  String? // 'web', 'kiosk', 'mobile'
   clockInLat  Float?
   clockInLng  Float?
   clockOutAt  DateTime?
   clockOutSrc String?
   clockOutLat Float?
   clockOutLng Float?
-  minutes     Int?              // computed on clock-out
-  status      AttendanceStatus  @default(working)
+  minutes     Int? // computed on clock-out
+  status      AttendanceStatus @default(working)
   notes       String?
 
-  employee  Employee @relation(fields: [employeeId], references: [id])
-  tenant    Tenant   @relation(fields: [tenantId], references: [id])
-  shift     Shift?   @relation(fields: [shiftId], references: [id])
+  employee Employee @relation(fields: [employeeId], references: [id])
+  tenant   Tenant   @relation(fields: [tenantId], references: [id])
+  shift    Shift?   @relation(fields: [shiftId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([tenantId, employeeId, date])       // one row per day
+  @@unique([tenantId, employeeId, date]) // one row per day
   @@index([tenantId, date])
   @@index([employeeId, date])
 }

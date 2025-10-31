@@ -19,6 +19,6 @@ model Employee {
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
 
-  @@index([tenantId, userId])
   @@unique([tenantId, userId])
+  @@index([tenantId, userId])
 }

@@ -2,7 +2,7 @@ model Notification {
   id        String   @id @default(cuid())
   tenantId  String
   userId    String
-  type      String   // e.g. "shift.created"
+  type      String // e.g. "shift.created"
   title     String
   body      String
   isRead    Boolean  @default(false)

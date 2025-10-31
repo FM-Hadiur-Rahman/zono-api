@@ -1,28 +1,22 @@
-// src/routes/attendance.router.js
 import { Router } from 'express';
-import { validate } from '../middlewares/validate.middleware.js';
-import { catchAsync } from '../utils/catchAsync.js';
 import {
+  listAttendance,
   clockIn,
   clockOut,
-  getDaily,
+  editAttendance,
+  markAbsent,
+  exportCSV,
 } from '../controllers/attendance.controller.js';
-import { ClockBody, DailyQuery } from '../schemas/attendance.schema.js';
-export const attendanceRouter = Router();
-attendanceRouter.post(
-  '/clock-in',
-  validate({ body: ClockBody }),
-  catchAsync(clockIn),
-);
+import { authMiddleware } from '../middlewares/auth.middleware.js';
 
-attendanceRouter.post(
-  '/clock-out',
-  validate({ body: ClockBody }),
-  catchAsync(clockOut),
-);
+const r = Router();
+r.use(authMiddleware);
 
-attendanceRouter.get(
-  '/daily',
-  validate({ query: DailyQuery }),
-  catchAsync(getDaily),
-);
+r.get('/', listAttendance);
+r.get('/export', exportCSV);
+r.post('/clock-in', clockIn);
+r.post('/clock-out', clockOut);
+r.patch('/:id', editAttendance);
+r.post('/mark-absent', markAbsent);
+
+export const attendanceRouter = r;
